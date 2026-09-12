@@ -1890,14 +1890,29 @@
             // 杭の中心から指までの線が掠めた杭を、引っ掛けたものとして扱う
             const needle = restSeq.length === 1
                 ? [anchorA[0], anchorA[1], pos.x, pos.y] : null;
+            // 指から留め具までの2辺。ここが杭の円を切っているなら、中心がまだ
+            // 内側に無くても掛かったことにする。中心が入ったかどうかだけで見ると、
+            // 杭を狙ってまっすぐ引いたときが境界そのものになり、1px 右へ外せば
+            // 掛かって左へ外せば掛からない。杭は格子に並んでいるので、その
+            // まっすぐが一番やりたくなる引き方になる。円1本のときと同じ見方に揃える。
+            // 接しているだけの杭を巻き込まないよう、判定は円のわずかに内側で採る
+            const legs = [
+                [restPath[restPath.length - 1][0], restPath[restPath.length - 1][1], pos.x, pos.y],
+                [pos.x, pos.y, restPath[0][0], restPath[0][1]],
+            ];
             const band = cur();
             let any = false;
             const next = new Map();
             for (const k of pegs) {
                 const [i, j] = k.split(',').map(Number);
+                const grazed = () => {
+                    const t = rOf(k) * TOUCH;
+                    return segDist(CX(i), CY(j), legs[0]) < t
+                        || segDist(CX(i), CY(j), legs[1]) < t;
+                };
                 const hooked = needle
                     ? segDist(CX(i), CY(j), needle) < rOf(k)
-                    : pointInPoly([CX(i), CY(j)], moved);
+                    : pointInPoly([CX(i), CY(j)], moved) || grazed();
                 const nv = anchorKeys.includes(k) ? (sideIn(band, k) ? IN : OUT)
                                                   : (hooked ? IN : OUT);
                 next.set(k, nv);
